@@ -1,0 +1,26 @@
+{
+  "type": "commonjs",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "csv-parser": "^3.2.0",
+    "csv-writer": "^1.6.0",
+    "express": "^5.1.0",
+    "fs": "^0.0.1-security",
+    "mysql2": "^3.14.1",
+    "papaparse": "^5.5.3",
+    "path": "^0.12.7"
+  },
+  "name": "sql",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node node.js",
+    "server": "server.js",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

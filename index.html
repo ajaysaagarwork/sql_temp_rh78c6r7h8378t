@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Read Folder CSVs and Export Combined</title>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+            max-width: 100%;
+            overflow-x: auto;
+            display: block;
+        }
+
+        td,
+        th {
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+            white-space: nowrap;
+        }
+
+        th {
+            background: #f0f0f0;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Select Folder with CSV Files</h2>
+    <input type="file" id="folderInput" webkitdirectory directory multiple />
+    <div id="output"></div>
+    <button id="downloadBtn" style="display:none;">⬇ Download Combined CSV</button>
+
+    <script>
+        const REQUIRED_COLUMNS = [
+            'District', 'Police_Station', 'CR_NO', 'Section_of_Law', 'Crime_Type',
+            'Year', 'Accused_Name', 'Accused_Nick_Name', 'Accused_Gender',
+            'Guardian', 'Accused_Age', 'Accused_Address'
+        ];
+
+        let combinedData = [];
+
+        document.getElementById('folderInput').addEventListener('change', function (e) {
+            const files = Array.from(e.target.files).filter(file => file.name.endsWith('.csv'));
+            if (!files.length) return alert("No CSV files found in selected folder.");
+
+            combinedData = []; // Reset previous data
+            document.getElementById('output').innerHTML = '';
+            document.getElementById('downloadBtn').style.display = 'none';
+
+            let filesProcessed = 0;
+
+            files.forEach(file => {
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function (results) {
+                        const validRows = [];
+
+                        results.data.forEach((row, i) => {
+                            try {
+                                const year = parseInt(row['Year']);
+                                if (isNaN(year)) return;
+
+                                let age = row['Accused_Age']?.trim();
+                                if (!age || age === 'NULL' || age === '0') {
+                                    age = '';
+                                } else {
+                                    const parsedAge = parseInt(age);
+                                    age = (isNaN(parsedAge) || parsedAge < 0 || parsedAge > 120) ? '' : parsedAge;
+                                }
+
+                                validRows.push({
+                                    District: row['District'],
+                                    Police_Station: row['Police_Station'],
+                                    CR_NO: row['CR_NO'],
+                                    Section_of_Law: row['Section_of_Law'],
+                                    Crime_Type: row['Crime_Type'],
+                                    Year: year,
+                                    Accused_Name: row['Accused_Name'],
+                                    Accused_Nick_Name: row['Accused_Nick_Name'],
+                                    Accused_Gender: row['Accused_Gender'],
+                                    Guardian: row['Guardian'],
+                                    Accused_Age: age,
+                                    Accused_Address: row['Accused_Address']
+                                });
+                            } catch (err) {
+                                console.warn("Error parsing row:", err);
+                            }
+                        });
+
+                        combinedData.push(...validRows);
+                        filesProcessed++;
+
+                        if (filesProcessed === files.length) {
+                            renderTable(combinedData);
+                            document.getElementById('downloadBtn').style.display = 'inline-block';
+                        }
+                    }
+                });
+            });
+        });
+
+        function renderTable(rows) {
+            const container = document.getElementById('output');
+            container.innerHTML = '';
+
+            if (!rows.length) {
+                container.textContent = 'No valid data found.';
+                return;
+            }
+
+            const table = document.createElement('table');
+            const headerRow = table.insertRow();
+
+            Object.keys(rows[0]).forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                headerRow.appendChild(th);
+            });
+
+            rows.forEach(row => {
+                const tr = table.insertRow();
+                Object.values(row).forEach(val => {
+                    const td = tr.insertCell();
+                    td.textContent = val ?? '';
+                });
+            });
+
+            container.appendChild(table);
+        }
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const csv = Papa.unparse(combinedData, {
+                columns: REQUIRED_COLUMNS
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'combined_crime_data.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+    </script>
+
+</body>
+
+</html>
